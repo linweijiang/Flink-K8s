@@ -1,0 +1,47 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: leen/flink-ha:v1
+        imagePullPolicy: Always
+        args:
+        - taskmanager
+        ports:
+        - containerPort: 6121
+          name: data
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6123
+          name: mine
+        - containerPort: 6125
+          name: query
+        env:
+        - name: TASK_MANAGER_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+
+        - name: HIGH_AVAILABILITY
+          value: zookeeper
+        - name: HIGH_AVAILABILITY_ZOOKEEPER_QUORUM
+          value: 192.168.202.130:2181
+        - name: HIGH_AVAILABILITY_ZOOKEEPER_PATH_ROOT
+          value: /flink_2
+        - name: HIGH_AVAILABILITY_CLUSTER_ID
+          value: /test_1
+        - name: HIGH_AVAILABILITY_STORAGEDIR
+          value: hdfs://192.168.202.130:9000/user/lwj/flink/jobmanager/recovery
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: flink-jobmanager-0.flink.default.svc.cluster.local:8081,flink-jobmanager-1.flink.default.svc.cluster.local:8081
+

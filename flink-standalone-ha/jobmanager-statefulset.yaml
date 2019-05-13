@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink
+  labels:
+    app: flink
+spec:
+  ports:
+  - port: 6123
+    name: rpc
+  - port: 6124
+    name: blob
+  - port: 6125
+    name: query
+  - port: 8081
+    name: ui
+  clusterIP: None
+  selector:
+    app: flink
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: flink-job-0
+spec:
+  type: NodePort
+  ports:
+    - port: 8081
+      nodePort: 30081
+  selector:
+    statefulset.kubernetes.io/pod-name: flink-jobmanager-0 
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: flink-job-1
+spec:
+  type: NodePort
+  ports:
+    - port: 8081
+      nodePort: 30082
+  selector:
+    statefulset.kubernetes.io/pod-name: flink-jobmanager-1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: flink-jobmanager
+spec:
+  selector:
+    matchLabels:
+      app: flink
+  serviceName: "flink"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: leen/flink-ha:v1
+        imagePullPolicy: Always
+        args:
+        - jobmanager
+        ports:
+        - containerPort: 6123
+          name: rpc
+        - containerPort: 6124
+          name: blob
+        - containerPort: 6125
+          name: query
+        - containerPort: 8081
+          name: ui
+        env:
+        - name: HIGH_AVAILABILITY
+          value: zookeeper
+        - name: HIGH_AVAILABILITY_ZOOKEEPER_QUORUM
+          value: 192.168.202.130:2181
+        - name: HIGH_AVAILABILITY_ZOOKEEPER_PATH_ROOT
+          value: /flink_2
+        - name: HIGH_AVAILABILITY_CLUSTER_ID
+          value: /test_1
+        - name: HIGH_AVAILABILITY_STORAGEDIR 
+          value: hdfs://192.168.202.130:9000/user/lwj/flink/jobmanager/recovery
+
